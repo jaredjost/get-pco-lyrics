@@ -1,15 +1,15 @@
 window.addEventListener('load', function() {
   const CLIENT_ID =
-    'fb493d88a959b9739c138854efc3c678b90ba1b324c249aa5db7e80bad45dd4b';
-  const REDIRECT_URI = 'https://pco-demo.herokuapp.com';
-  const PCO_AUTH_URL = `https://api.planningcenteronline.com/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=people`;
+    'a892135e04e60ac990969c510b4a88fadbe525abc269593ef25b0f0ebff06143';
+  const REDIRECT_URI = 'https://get-pco-lyrics.herokuapp.com';
+  const PCO_AUTH_URL = `https://api.planningcenteronline.com/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=services`;
   const CODE = new URL(window.location).searchParams.get('code');
   const accessToken = localStorage.getItem('access_token');
   const expiresAt = +localStorage.getItem('expires_at');
   const loginBtn = document.getElementById('login');
   const logoutBtn = document.getElementById('logout');
-  const getPeopleBtn = document.getElementById('get-people');
-  const peoplePre = document.getElementById('people');
+  const getLyricsBtn = document.getElementById('get-lyrics');
+  const lyricsPre = document.getElementById('lyrics');
 
   loginBtn.addEventListener('click', () => {
     window.location = PCO_AUTH_URL;
@@ -20,18 +20,18 @@ window.addEventListener('load', function() {
     localStorage.removeItem('expires_at');
     loginBtn.style.display = 'inline-block';
     logoutBtn.style.display = 'none';
-    getPeopleBtn.style.display = 'none';
-    peoplePre.style.display = 'none';
+    getLyricsBtn.style.display = 'none';
+    lyricsPre.style.display = 'none';
   });
 
-  getPeopleBtn.addEventListener('click', () => {
+  getLyricsBtn.addEventListener('click', () => {
     const headers = {
       Authorization: `Bearer ${localStorage.getItem('access_token')}`
     };
     axios
-      .get('https://api.planningcenteronline.com/people/v2/people', { headers })
+      .get('https://api.planningcenteronline.com/services/v2/service_types', { headers })
       .then(result => {
-        peoplePre.innerHTML = JSON.stringify(
+        lyricsPre.innerHTML = JSON.stringify(
           result.data,
           null,
           2
@@ -61,10 +61,10 @@ window.addEventListener('load', function() {
   if (accessToken && new Date().getTime() < expiresAt) {
     loginBtn.style.display = 'none';
     logoutBtn.style.display = 'inline-block';
-    getPeopleBtn.style.display = 'inline-block';
+    getLyricsBtn.style.display = 'inline-block';
   } else {
     loginBtn.style.display = 'inline-block';
     logoutBtn.style.display = 'none';
-    getPeopleBtn.style.display = 'none';
+    getLyricsBtn.style.display = 'none';
   }
 });

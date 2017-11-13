@@ -6,9 +6,9 @@ require('dotenv').config();
 
 app.use(bodyParser());
 
-const CLIENT_ID = 'fb493d88a959b9739c138854efc3c678b90ba1b324c249aa5db7e80bad45dd4b';
+const CLIENT_ID = 'a892135e04e60ac990969c510b4a88fadbe525abc269593ef25b0f0ebff06143';
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const REDIRECT_URI = 'https://pco-demo.herokuapp.com';
+const REDIRECT_URI = 'https://get-pco-lyrics.herokuapp.com';
 
 app.use(express.static(__dirname));
 

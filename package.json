@@ -1,13 +1,13 @@
 {
-  "name": "pco.demo",
+  "name": "get-pco-lyrics",
   "version": "1.0.0",
-  "description": "",
+  "description": "Gets lyrics for the next upcoming service in PCO",
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "author": "Ryan Chenkie",
+  "author": "Jared Jost",
   "license": "MIT",
   "dependencies": {
     "axios": "^0.16.2",
