@@ -9,8 +9,9 @@ window.addEventListener('load', function() {
   const expiresAt = +localStorage.getItem('expires_at');
   const btnLogin = document.getElementById('login-btn');
   const btnLogout = document.getElementById('logout-btn');
-  const btnGetLyrics = document.getElementById('get-lyrics-btn');
-  const divLyrics = document.getElementById('lyrics-div');
+  const btnCopy = document.getElementById('copy-btn');
+  const divStatus = document.getElementById('status-div');
+  const divSongs = document.getElementById('songs-div');
   const headers = {
     Authorization: `Bearer ${localStorage.getItem('access_token')}`
   };
@@ -32,13 +33,9 @@ window.addEventListener('load', function() {
   }
 
   if (accessToken && new Date().getTime() < expiresAt) {
-    btnLogin.style.display = 'none';
-    btnLogout.style.display = 'inline-block';
-    btnGetLyrics.style.display = 'inline-block';
+    onLogin();
   } else {
-    btnLogin.style.display = 'inline-block';
-    btnLogout.style.display = 'none';
-    btnGetLyrics.style.display = 'none';
+    onLogout();
   }
 
   btnLogin.addEventListener('click', () => {
@@ -48,13 +45,41 @@ window.addEventListener('load', function() {
   btnLogout.addEventListener('click', () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('expires_at');
-    btnLogin.style.display = 'inline-block';
-    btnLogout.style.display = 'none';
-    btnGetLyrics.style.display = 'none';
-    divLyrics.style.display = 'none';
+    onLogout();
   });
 
-  btnGetLyrics.addEventListener('click', () => {
+  btnCopy.addEventListener('click', () => {
+    var elementId = 'songs-div';
+    if (document.selection) {
+      var range = document.body.createTextRange();
+      range.moveToElementText(document.getElementById(elementId));
+      range.select().createTextRange();
+      document.execCommand("Copy");
+    } else if (window.getSelection) {
+      var range = document.createRange();
+      range.selectNode(document.getElementById(elementId));
+      window.getSelection().addRange(range);
+      document.execCommand("Copy");
+    }
+  });
+
+  function onLogout() {
+    console.log('onLogout()');
+    btnLogin.style.display = 'inline-block';
+    btnLogout.style.display = 'none';
+    btnCopy.style.display = 'none';
+    divStatus.style.display = 'none';
+    divSongs.style.display = 'none';
+  }
+
+  function onLogin() {
+    console.log('onLogin()');
+    divStatus.innerHTML = 'Searching for services... ';
+    btnLogin.style.display = 'none';
+    btnLogout.style.display = 'inline-block';
+    btnCopy.style.display = 'inline-block';
+    divStatus.style.display = '';
+    divSongs.style.display = '';
     axios
       .get('https://api.planningcenteronline.com/services/v2/service_types', { headers })
       .then(result => {
@@ -69,9 +94,10 @@ window.addEventListener('load', function() {
       .catch(error => {
         console.log('error ', error);
       });
-  });
+  }
 
   function processPlans(url) {
+    console.log('processPlans(' + url + ')');
     axios
       .get(url, { headers })
       .then(result => {
@@ -84,11 +110,12 @@ window.addEventListener('load', function() {
   }
 
   function processFuturePlans(url) {
+    console.log('processFuturePlans(' + url + ')');
     axios
       .get(url, { headers })
       .then(result => {
         var nextPlan = result.data.data[0];
-        console.log('service: ' + nextPlan.attributes.dates);
+        divStatus.innerHTML += nextPlan.attributes.dates + "<br>";
         processItems(nextPlan.links.self + '/items', 0);
       })
       .catch(function(error) {
@@ -97,19 +124,26 @@ window.addEventListener('load', function() {
   }
 
   function processItems(url) {
+    console.log('processItems(' + url + ')');
     axios
       .get(url, { headers })
       .then(result => {
         var items = result.data.data;
+        var isFound = false;
+        divStatus.innerHTML += 'Searching for songs...<br>';
         for (i in items) {
           if (items[i].attributes.item_type == 'song') {
-            console.log('song: ' + items[i].attributes.title);
-            var newpre = document.createElement('pre');
-            newpre.id = items[i].relationships.arrangement.data.id;
-            newpre.innerHTML = items[i].attributes.title + '\n\n';
-            divLyrics.appendChild(newpre);
+            isFound = true;
+            divStatus.innerHTML += items[i].attributes.title + '<br>';
+            var preSong = document.createElement('pre');
+            preSong.id = items[i].relationships.arrangement.data.id;
+            preSong.innerHTML = items[i].attributes.title + '\n\n';
+            divSongs.appendChild(preSong);
             processSong(items[i].links.self + '/arrangement');
           }
+        }
+        if (!isFound) {
+          divStatus.innerHTML += 'No songs found';
         }
       })
       .catch(error => {
@@ -118,13 +152,14 @@ window.addEventListener('load', function() {
   }
 
   function processSong(url) {
+    console.log('processSong(' + url + ')');
     axios
       .get(url, { headers })
       .then(result => {
         var song = result.data.data;
         var chart = song.attributes.chord_chart;
-        var pre = document.getElementById(song.id);
-        pre.innerHTML += format(chart) + '\n\n';
+        var preSong = document.getElementById(song.id);
+        preSong.innerHTML += format(chart) + '\n\n';
       })
       .catch(error => {
         console.log('error ', error);
