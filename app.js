@@ -9,7 +9,7 @@ window.addEventListener('load', function() {
   const expiresAt = +localStorage.getItem('expires_at');
   const btnLogin = document.getElementById('login-btn');
   const btnLogout = document.getElementById('logout-btn');
-  const btnCopy = document.getElementById('copy-btn');
+  const btnCopyAll = document.getElementById('copy-btn');
   const divStatus = document.getElementById('status-div');
   const divSongs = document.getElementById('songs-div');
   const headers = {
@@ -35,6 +35,9 @@ window.addEventListener('load', function() {
   if (accessToken && new Date().getTime() < expiresAt) {
     onLogin();
   } else {
+    console.log('accessToken: ', accessToken);
+    console.log('expiresAt: ', expiresAt);
+    console.log('current time: ', new Date().getTime());
     onLogout();
   }
 
@@ -48,26 +51,35 @@ window.addEventListener('load', function() {
     onLogout();
   });
 
-  btnCopy.addEventListener('click', () => {
-    var elementId = 'songs-div';
-    if (document.selection) {
-      var range = document.body.createTextRange();
-      range.moveToElementText(document.getElementById(elementId));
-      range.select().createTextRange();
-      document.execCommand("Copy");
-    } else if (window.getSelection) {
-      var range = document.createRange();
-      range.selectNode(document.getElementById(elementId));
-      window.getSelection().addRange(range);
-      document.execCommand("Copy");
-    }
+  btnCopyAll.addEventListener('click', () => {
+    copyToClipboard('songs-div');
   });
+
+  function copyToClipboard(elementID) {
+    console.log('copyToClipboard(' + elementID + ')');
+    // Code source: https://stackoverflow.com/questions/23048550/how-to-copy-a-divs-content-to-clipboard-without-flash
+    // Create a new textarea element and give it id='t'
+    let textarea = document.createElement('textarea')
+    textarea.id = 't'
+    // Optional step to make less noise on the page, if any!
+    textarea.style.height = 0
+    // Now append it to your page somewhere, I chose <body>
+    document.body.appendChild(textarea)
+    // Give our textarea a value of whatever inside the div of id='to-copy'
+    textarea.value = document.getElementById(elementID).innerText.trim()
+    // Now copy whatever inside the textarea to clipboard
+    let selector = document.querySelector('#t')
+    selector.select()
+    document.execCommand('copy')
+    // Remove the textarea
+    document.body.removeChild(textarea)
+  }
 
   function onLogout() {
     console.log('onLogout()');
     btnLogin.style.display = 'inline-block';
     btnLogout.style.display = 'none';
-    btnCopy.style.display = 'none';
+    btnCopyAll.style.display = 'none';
     divStatus.style.display = 'none';
     divSongs.style.display = 'none';
   }
@@ -77,7 +89,7 @@ window.addEventListener('load', function() {
     divStatus.innerHTML = 'Searching for services... ';
     btnLogin.style.display = 'none';
     btnLogout.style.display = 'inline-block';
-    btnCopy.style.display = 'inline-block';
+    btnCopyAll.style.display = 'inline-block';
     divStatus.style.display = '';
     divSongs.style.display = '';
     axios
@@ -85,8 +97,8 @@ window.addEventListener('load', function() {
       .then(result => {
         var serviceTypes = result.data.data;
         for (i in serviceTypes) {
-          if (serviceTypes[i].attributes.name == "Sunday Service" && serviceTypes[i].type == "ServiceType") {
-            processPlans(serviceTypes[i].links.self + "/plans");
+          if (serviceTypes[i].attributes.name == 'Sunday Service' && serviceTypes[i].type == 'ServiceType') {
+            processPlans(serviceTypes[i].links.self + '/plans');
             break;
           }
         }
@@ -115,7 +127,7 @@ window.addEventListener('load', function() {
       .get(url, { headers })
       .then(result => {
         var nextPlan = result.data.data[0];
-        divStatus.innerHTML += nextPlan.attributes.dates + "<br>";
+        divStatus.innerHTML += nextPlan.attributes.dates + '<br>';
         processItems(nextPlan.links.self + '/items', 0);
       })
       .catch(function(error) {
@@ -134,11 +146,19 @@ window.addEventListener('load', function() {
         for (i in items) {
           if (items[i].attributes.item_type == 'song') {
             isFound = true;
-            divStatus.innerHTML += items[i].attributes.title + '<br>';
+            divStatus.innerHTML += items[i].attributes.title + ' ';
+
             var preSong = document.createElement('pre');
             preSong.id = items[i].relationships.arrangement.data.id;
             preSong.innerHTML = items[i].attributes.title + '\n\n';
             divSongs.appendChild(preSong);
+
+            var btnCopy = document.createElement('button');
+            btnCopy.id = preSong.id + '-btn';
+            btnCopy.innerHTML = 'Copy Lyrics';
+            divStatus.appendChild(btnCopy);
+            divStatus.innerHTML += '<br>';
+
             processSong(items[i].links.self + '/arrangement');
           }
         }
@@ -160,6 +180,9 @@ window.addEventListener('load', function() {
         var chart = song.attributes.chord_chart;
         var preSong = document.getElementById(song.id);
         preSong.innerHTML += format(chart) + '\n\n';
+        // Not sure why, but the event listener only seemed to work when I created it here...
+        var btnCopy = document.getElementById(song.id + '-btn');
+        btnCopy.addEventListener('click', function() { copyToClipboard(song.id); });
       })
       .catch(error => {
         console.log('error ', error);
