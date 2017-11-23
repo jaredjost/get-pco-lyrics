@@ -86,7 +86,7 @@ window.addEventListener('load', function() {
 
   function onLogin() {
     console.log('onLogin()');
-    divStatus.innerHTML = 'Searching for services... ';
+    divStatus.innerHTML = 'Accessing PCO...<br>';
     btnLogin.style.display = 'none';
     btnLogout.style.display = 'inline-block';
     btnCopyAll.style.display = 'inline-block';
@@ -96,11 +96,22 @@ window.addEventListener('load', function() {
       .get('https://api.planningcenteronline.com/services/v2/service_types', { headers })
       .then(result => {
         var serviceTypes = result.data.data;
-        for (i in serviceTypes) {
-          if (serviceTypes[i].attributes.name == 'Sunday Service' && serviceTypes[i].type == 'ServiceType') {
-            processPlans(serviceTypes[i].links.self + '/plans');
-            break;
+        if (serviceTypes.length == 1) {
+          divStatus.innerHTML += 'Service Type: ' + serviceTypes[0].attributes.name;
+          processPlans(serviceTypes[0].links.self + '/plans');
+        } else if (serviceTypes.length > 1) {
+          divStatus.innerHTML += 'Service Type: ';
+          var select = document.createElement('select');
+          for (i in serviceTypes) {
+            var opt = new Option();
+            opt.value = i;
+            opt.text = serviceTypes[i].attributes.name;
+            select.options.add(opt);
           }
+          divStatus.appendChild(select);
+          processPlans(serviceTypes[select.value].links.self + '/plans');
+        } else {
+          console.log('No service types found');
         }
       })
       .catch(error => {
@@ -110,6 +121,7 @@ window.addEventListener('load', function() {
 
   function processPlans(url) {
     console.log('processPlans(' + url + ')');
+    divStatus.innerHTML += '<br>Searching for the next upcoming plan... ';
     axios
       .get(url, { headers })
       .then(result => {
@@ -126,9 +138,13 @@ window.addEventListener('load', function() {
     axios
       .get(url, { headers })
       .then(result => {
-        var nextPlan = result.data.data[0];
-        divStatus.innerHTML += nextPlan.attributes.dates + '<br>';
-        processItems(nextPlan.links.self + '/items', 0);
+        if (result.data.data.length > 0) {
+          var nextPlan = result.data.data[0];
+          divStatus.innerHTML += nextPlan.attributes.dates + '<br>';
+          processItems(nextPlan.links.self + '/items', 0);
+        } else {
+          divStatus.innerHTML += 'No future plans found';
+        }
       })
       .catch(function(error) {
         console.log(error);
@@ -142,11 +158,13 @@ window.addEventListener('load', function() {
       .then(result => {
         var items = result.data.data;
         var isFound = false;
-        divStatus.innerHTML += 'Searching for songs...<br>';
+        divStatus.innerHTML += 'Searching for songs... ';
+        var count = 0;
         for (i in items) {
           if (items[i].attributes.item_type == 'song') {
             isFound = true;
-            divStatus.innerHTML += items[i].attributes.title + ' ';
+            count++;
+            divStatus.innerHTML += '<br>' + count + ': ' + items[i].attributes.title + ' ';
 
             var preSong = document.createElement('pre');
             preSong.id = items[i].relationships.arrangement.data.id;
@@ -157,7 +175,6 @@ window.addEventListener('load', function() {
             btnCopy.id = preSong.id + '-btn';
             btnCopy.innerHTML = 'Copy Lyrics';
             divStatus.appendChild(btnCopy);
-            divStatus.innerHTML += '<br>';
 
             processSong(items[i].links.self + '/arrangement');
           }
