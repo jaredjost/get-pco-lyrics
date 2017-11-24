@@ -9,7 +9,8 @@ window.addEventListener('load', function() {
   const expiresAt = +localStorage.getItem('expires_at');
   const btnLogin = document.getElementById('login-btn');
   const btnLogout = document.getElementById('logout-btn');
-  const btnCopyAll = document.getElementById('copy-btn');
+  const btnCopyAll = document.getElementById('copy-all-btn');
+  const divServiceType = document.getElementById('service-type-div');
   const divStatus = document.getElementById('status-div');
   const divSongs = document.getElementById('songs-div');
   const headers = {
@@ -55,8 +56,8 @@ window.addEventListener('load', function() {
     copyToClipboard('songs-div');
   });
 
-  function copyToClipboard(elementID) {
-    console.log('copyToClipboard(' + elementID + ')');
+  function copyToClipboard(elementId) {
+    console.log('copyToClipboard(' + elementId + ')');
     // Code source: https://stackoverflow.com/questions/23048550/how-to-copy-a-divs-content-to-clipboard-without-flash
     // Create a new textarea element and give it id='t'
     let textarea = document.createElement('textarea')
@@ -66,7 +67,7 @@ window.addEventListener('load', function() {
     // Now append it to your page somewhere, I chose <body>
     document.body.appendChild(textarea)
     // Give our textarea a value of whatever inside the div of id='to-copy'
-    textarea.value = document.getElementById(elementID).innerText.trim()
+    textarea.value = document.getElementById(elementId).innerText.trim()
     // Now copy whatever inside the textarea to clipboard
     let selector = document.querySelector('#t')
     selector.select()
@@ -75,41 +76,74 @@ window.addEventListener('load', function() {
     document.body.removeChild(textarea)
   }
 
+  function onServiceTypeChanged() {
+    console.log('onServiceTypeChanged()');
+    processPlans(this.value);
+  }
+
+  function appendText(element, text) {
+    element.appendChild(document.createTextNode(text));
+  }
+
+  function appendElement(element, elementType) {
+    element.appendChild(document.createElement(elementType));
+  }
+
   function onLogout() {
     console.log('onLogout()');
     btnLogin.style.display = 'inline-block';
     btnLogout.style.display = 'none';
     btnCopyAll.style.display = 'none';
+    divServiceType.style.display = 'none';
     divStatus.style.display = 'none';
     divSongs.style.display = 'none';
   }
 
   function onLogin() {
     console.log('onLogin()');
-    divStatus.innerHTML = 'Accessing PCO...<br>';
     btnLogin.style.display = 'none';
     btnLogout.style.display = 'inline-block';
     btnCopyAll.style.display = 'inline-block';
+    divServiceType.style.display = '';
     divStatus.style.display = '';
     divSongs.style.display = '';
+
+    appendText(divServiceType, 'Accessing PCO... ');
+    axios
+      .get('https://api.planningcenteronline.com/services/v2', { headers })
+      .then(result => {
+        appendText(divServiceType, result.data.data.attributes.name);
+        appendElement(divServiceType, 'br');
+        processServiceTypes();
+      })
+      .catch(error => {
+        console.log('error ', error);
+      });
+  }
+
+  function processServiceTypes() {
+    console.log('processServiceTypes()');
     axios
       .get('https://api.planningcenteronline.com/services/v2/service_types', { headers })
       .then(result => {
         var serviceTypes = result.data.data;
         if (serviceTypes.length == 1) {
-          divStatus.innerHTML += 'Service Type: ' + serviceTypes[0].attributes.name;
+          appendText(divServiceType, 'Service Type: ' + serviceTypes[0].attributes.name);
           processPlans(serviceTypes[0].links.self + '/plans');
         } else if (serviceTypes.length > 1) {
-          divStatus.innerHTML += 'Service Type: ';
+          appendText(divServiceType, 'Service Type: ');
+          var select = document.getElementById('service-type-sel');
           var select = document.createElement('select');
+          select.id = 'service-type-sel';
+          select.addEventListener('change', onServiceTypeChanged);
           for (i in serviceTypes) {
             var opt = new Option();
-            opt.value = i;
+            opt.value = serviceTypes[i].links.self + '/plans';
             opt.text = serviceTypes[i].attributes.name;
             select.options.add(opt);
           }
-          divStatus.appendChild(select);
-          processPlans(serviceTypes[select.value].links.self + '/plans');
+          divServiceType.appendChild(select);
+          processPlans(serviceTypes[0].links.self + '/plans');
         } else {
           console.log('No service types found');
         }
@@ -121,7 +155,9 @@ window.addEventListener('load', function() {
 
   function processPlans(url) {
     console.log('processPlans(' + url + ')');
-    divStatus.innerHTML += '<br>Searching for the next upcoming plan... ';
+    divStatus.innerHTML = '';
+    divSongs.innerHTML = '';
+    appendText(divStatus, 'Searching for the next upcoming plan... ');
     axios
       .get(url, { headers })
       .then(result => {
@@ -140,10 +176,11 @@ window.addEventListener('load', function() {
       .then(result => {
         if (result.data.data.length > 0) {
           var nextPlan = result.data.data[0];
-          divStatus.innerHTML += nextPlan.attributes.dates + '<br>';
+          appendText(divStatus, nextPlan.attributes.dates);
+          appendElement(divStatus, 'br');
           processItems(nextPlan.links.self + '/items', 0);
         } else {
-          divStatus.innerHTML += 'No future plans found';
+          appendText(divStatus, 'No future plans found');
         }
       })
       .catch(function(error) {
@@ -158,29 +195,33 @@ window.addEventListener('load', function() {
       .then(result => {
         var items = result.data.data;
         var isFound = false;
-        divStatus.innerHTML += 'Searching for songs... ';
+        appendText(divStatus, 'Searching for songs... ');
         var count = 0;
         for (i in items) {
           if (items[i].attributes.item_type == 'song') {
             isFound = true;
             count++;
-            divStatus.innerHTML += '<br>' + count + ': ' + items[i].attributes.title + ' ';
+            appendElement(divStatus, 'br');
+            appendText(divStatus, count + ': ' + items[i].attributes.title + ' ');
+
+            var songId = items[i].relationships.arrangement.data.id;
+            var btnCopy = document.createElement('button');
+            btnCopy.id = songId + '-btn';
+            btnCopy.addEventListener('click', function() {
+              copyToClipboard(this.id.substring(0, this.id.length-4));
+            });
+            appendText(btnCopy, 'Copy Lyrics');
+            divStatus.appendChild(btnCopy);
 
             var preSong = document.createElement('pre');
-            preSong.id = items[i].relationships.arrangement.data.id;
-            preSong.innerHTML = items[i].attributes.title + '\n\n';
+            preSong.id = songId;
             divSongs.appendChild(preSong);
-
-            var btnCopy = document.createElement('button');
-            btnCopy.id = preSong.id + '-btn';
-            btnCopy.innerHTML = 'Copy Lyrics';
-            divStatus.appendChild(btnCopy);
 
             processSong(items[i].links.self + '/arrangement');
           }
         }
         if (!isFound) {
-          divStatus.innerHTML += 'No songs found';
+          appendText(divStatus, 'No songs found');
         }
       })
       .catch(error => {
@@ -196,10 +237,38 @@ window.addEventListener('load', function() {
         var song = result.data.data;
         var chart = song.attributes.chord_chart;
         var preSong = document.getElementById(song.id);
-        preSong.innerHTML += format(chart) + '\n\n';
-        // Not sure why, but the event listener only seemed to work when I created it here...
-        var btnCopy = document.getElementById(song.id + '-btn');
-        btnCopy.addEventListener('click', function() { copyToClipboard(song.id); });
+        appendText(preSong, format(chart) + '\n\n');
+        processSongInfo(preSong, 'https://api.planningcenteronline.com/services/v2/songs/' + song.relationships.song.data.id);
+      })
+      .catch(error => {
+        console.log('error ', error);
+      });
+  }
+
+  function processSongInfo(preSong, url) {
+    console.log('processSongInfo(' + url + ')');
+    axios
+      .get(url, { headers })
+      .then(result => {
+        var songInfo = result.data.data;
+        var divSongInfo = document.createElement('div');
+        appendText(divSongInfo, songInfo.attributes.title);
+        appendElement(divSongInfo, 'br');
+        appendElement(divSongInfo, 'br');
+        var author = songInfo.attributes.author;
+        if (author != null) {
+          appendText(divSongInfo, 'Author: ' + author);
+          appendElement(divSongInfo, 'br');
+        }
+        var copyright = songInfo.attributes.copyright;
+        if (copyright != null) {
+          appendText(divSongInfo, 'Copyright: ' + copyright);
+          appendElement(divSongInfo, 'br');
+        }
+        if (author != null || copyright != null) {
+          appendElement(divSongInfo, 'br');
+        }
+        preSong.insertBefore(divSongInfo, preSong.firstChild);
       })
       .catch(error => {
         console.log('error ', error);
