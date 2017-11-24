@@ -237,7 +237,11 @@ window.addEventListener('load', function() {
         var song = result.data.data;
         var chart = song.attributes.chord_chart;
         var preSong = document.getElementById(song.id);
-        appendText(preSong, format(chart) + '\n\n');
+        if (chart != null) {
+          appendText(preSong, format(chart) + '\n\n');
+        } else {
+          appendText(preSong, 'No lyrics found\n\n');
+        }
         processSongInfo(preSong, 'https://api.planningcenteronline.com/services/v2/songs/' + song.relationships.song.data.id);
       })
       .catch(error => {
@@ -276,11 +280,13 @@ window.addEventListener('load', function() {
   }
 
   function format(str) {
-    str = str.trim();
-    str = str.replace(/\[.*?\]/g, "");
-    str = str.replace(/COLUMN_BREAK/g, "");
-    str = str.replace(/PAGE_BREAK/g, "");
-    str = str.replace(/<hide>.*<\/hide>/g, "");
+    if (str != null) {
+      str = str.trim();
+      str = str.replace(/\[.*?\]/g, "");
+      str = str.replace(/COLUMN_BREAK/g, "");
+      str = str.replace(/PAGE_BREAK/g, "");
+      str = str.replace(/<hide>.*<\/hide>/g, "");
+    }
     return str;
   }
 });
