@@ -244,6 +244,9 @@ window.addEventListener('load', function() {
             var chkSong = document.createElement('input');
             chkSong.type = 'checkbox';
             chkSong.id = songId;
+            chkSong.addEventListener('click', function() {
+              document.getElementById('select-all-chk').checked = false;
+            });
             divSongList.appendChild(chkSong);
 
             appendText(divSongList, ' ' + count + ': ' + items[i].attributes.title + ' ');
