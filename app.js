@@ -9,9 +9,9 @@ window.addEventListener('load', function() {
   const expiresAt = +localStorage.getItem('expires_at');
   const btnLogin = document.getElementById('login-btn');
   const btnLogout = document.getElementById('logout-btn');
-  const btnCopyAll = document.getElementById('copy-all-btn');
   const divServiceType = document.getElementById('service-type-div');
   const divStatus = document.getElementById('status-div');
+  const divSongList = document.getElementById('song-list-div');
   const divSongs = document.getElementById('songs-div');
   const headers = {
     Authorization: `Bearer ${localStorage.getItem('access_token')}`
@@ -52,12 +52,7 @@ window.addEventListener('load', function() {
     onLogout();
   });
 
-  btnCopyAll.addEventListener('click', () => {
-    copyToClipboard('songs-div');
-  });
-
-  function copyToClipboard(elementId) {
-    console.log('copyToClipboard(' + elementId + ')');
+  function copyToClipboard(txt) {
     // Code source: https://stackoverflow.com/questions/23048550/how-to-copy-a-divs-content-to-clipboard-without-flash
     // Create a new textarea element and give it id='t'
     let textarea = document.createElement('textarea')
@@ -67,7 +62,7 @@ window.addEventListener('load', function() {
     // Now append it to your page somewhere, I chose <body>
     document.body.appendChild(textarea)
     // Give our textarea a value of whatever inside the div of id='to-copy'
-    textarea.value = document.getElementById(elementId).innerText.trim()
+    textarea.value = txt.trim()
     // Now copy whatever inside the textarea to clipboard
     let selector = document.querySelector('#t')
     selector.select()
@@ -93,9 +88,9 @@ window.addEventListener('load', function() {
     console.log('onLogout()');
     btnLogin.style.display = 'inline-block';
     btnLogout.style.display = 'none';
-    btnCopyAll.style.display = 'none';
     divServiceType.style.display = 'none';
     divStatus.style.display = 'none';
+    divSongList.style.display = 'none';
     divSongs.style.display = 'none';
   }
 
@@ -103,9 +98,9 @@ window.addEventListener('load', function() {
     console.log('onLogin()');
     btnLogin.style.display = 'none';
     btnLogout.style.display = 'inline-block';
-    btnCopyAll.style.display = 'inline-block';
     divServiceType.style.display = '';
     divStatus.style.display = '';
+    divSongList.style.display = '';
     divSongs.style.display = '';
 
     appendText(divServiceType, 'Accessing PCO... ');
@@ -156,6 +151,7 @@ window.addEventListener('load', function() {
   function processPlans(url) {
     console.log('processPlans(' + url + ')');
     divStatus.innerHTML = '';
+    divSongList.innerHTML = '';
     divSongs.innerHTML = '';
     appendText(divStatus, 'Searching for the next upcoming plan... ');
     axios
@@ -196,31 +192,73 @@ window.addEventListener('load', function() {
         var items = result.data.data;
         var isFound = false;
         appendText(divStatus, 'Searching for songs... ');
+
+        var chkSelectAll = document.createElement('input');
+        chkSelectAll.type = 'checkbox';
+        chkSelectAll.id = 'select-all-chk';
+        chkSelectAll.addEventListener('click', function() {
+          var chkSelectAll = document.getElementById('select-all-chk');
+          for (i in divSongList.childNodes) {
+            var element = divSongList.childNodes[i];
+            if (element.type == 'checkbox' && element.id != 'select-all-chk') {
+              element.checked = chkSelectAll.checked;
+            }
+          }
+        });
+        divSongList.appendChild(chkSelectAll);
+        appendText(divSongList, ' select all ');
+
+        var btnCopy = document.createElement('button');
+        btnCopy.id = 'copy-btn';
+        btnCopy.addEventListener('click', function() {
+          var lyrics = '';
+          var chkSelectAll = document.getElementById('select-all-chk');
+          for (i in divSongList.childNodes) {
+            var element = divSongList.childNodes[i];
+            if (element.type == 'checkbox' &&
+                element.id != 'select-all-chk' &&
+                element.checked) {
+              console.log('Getting contents of ' + element.id + '-pre');
+              lyrics += document.getElementById(element.id + '-pre').innerText;
+              count++;
+            }
+          }
+          if (lyrics.length > 0) {
+            console.log('Selected songs copied to clipboard');
+            copyToClipboard(lyrics);
+          } else {
+            alert('Please select at least one song to copy');
+          }
+        });
+        appendText(btnCopy, 'Copy To Clipboard');
+        divSongList.appendChild(btnCopy);
+
         var count = 0;
         for (i in items) {
           if (items[i].attributes.item_type == 'song') {
             isFound = true;
             count++;
-            appendElement(divStatus, 'br');
-            appendText(divStatus, count + ': ' + items[i].attributes.title + ' ');
+            appendElement(divSongList, 'br');
 
             var songId = items[i].relationships.arrangement.data.id;
-            var btnCopy = document.createElement('button');
-            btnCopy.id = songId + '-btn';
-            btnCopy.addEventListener('click', function() {
-              copyToClipboard(this.id.substring(0, this.id.length-4));
-            });
-            appendText(btnCopy, 'Copy Lyrics');
-            divStatus.appendChild(btnCopy);
+            var chkSong = document.createElement('input');
+            chkSong.type = 'checkbox';
+            chkSong.id = songId;
+            divSongList.appendChild(chkSong);
+
+            appendText(divSongList, ' ' + count + ': ' + items[i].attributes.title + ' ');
 
             var preSong = document.createElement('pre');
-            preSong.id = songId;
+            preSong.id = songId + '-pre';
             divSongs.appendChild(preSong);
 
             processSong(items[i].links.self + '/arrangement');
           }
         }
-        if (!isFound) {
+        if (isFound) {
+          chkSelectAll.click();
+        } else {
+          divSongList.innerHTML = '';
           appendText(divStatus, 'No songs found');
         }
       })
@@ -236,7 +274,7 @@ window.addEventListener('load', function() {
       .then(result => {
         var song = result.data.data;
         var chart = song.attributes.chord_chart;
-        var preSong = document.getElementById(song.id);
+        var preSong = document.getElementById(song.id + '-pre');
         if (chart != null) {
           appendText(preSong, format(chart) + '\n\n');
         } else {
@@ -256,6 +294,7 @@ window.addEventListener('load', function() {
       .then(result => {
         var songInfo = result.data.data;
         var divSongInfo = document.createElement('div');
+        divSongInfo.id = songInfo.id;
         appendText(divSongInfo, songInfo.attributes.title);
         appendElement(divSongInfo, 'br');
         appendElement(divSongInfo, 'br');
