@@ -249,13 +249,16 @@ window.addEventListener('load', function() {
             });
             divSongList.appendChild(chkSong);
 
-            appendText(divSongList, ' ' + count + ': ' + items[i].attributes.title + ' ');
+            var spanSong = document.createElement('span');
+            spanSong.id = songId + '-span';
+            appendText(spanSong, ' ' + count + ': ' + items[i].attributes.title + ' ');
+            divSongList.appendChild(spanSong);
 
             var preSong = document.createElement('pre');
             preSong.id = songId + '-pre';
             divSongs.appendChild(preSong);
 
-            processSong(items[i].links.self + '/arrangement');
+            processSong(items[i].links.self + '/arrangement', items[i].attributes.description);
           }
         }
         if (isFound) {
@@ -270,8 +273,8 @@ window.addEventListener('load', function() {
       });
   }
 
-  function processSong(url) {
-    console.log('processSong(' + url + ')');
+  function processSong(url, description) {
+    console.log('processSong(' + url + ', ' + description + ')');
     axios
       .get(url, { headers })
       .then(result => {
@@ -279,7 +282,9 @@ window.addEventListener('load', function() {
         var chart = song.attributes.chord_chart;
         var preSong = document.getElementById(song.id + '-pre');
         if (chart != null) {
-          appendText(preSong, format(chart) + '\n\n');
+          var divChart = document.createElement('div');
+          divChart.innerHTML = formatSong(chart, description, song.id) + '\n\n';
+          preSong.appendChild(divChart);
         } else {
           appendText(preSong, 'No lyrics found\n\n');
         }
@@ -297,23 +302,12 @@ window.addEventListener('load', function() {
       .then(result => {
         var songInfo = result.data.data;
         var divSongInfo = document.createElement('div');
-        divSongInfo.id = songInfo.id;
-        appendText(divSongInfo, songInfo.attributes.title);
-        appendElement(divSongInfo, 'br');
-        appendElement(divSongInfo, 'br');
+        appendText(divSongInfo, songInfo.attributes.title + '\n');
         var author = songInfo.attributes.author;
         if (author != null) {
-          appendText(divSongInfo, 'Author: ' + author);
-          appendElement(divSongInfo, 'br');
+          appendText(divSongInfo, '(' + author + ')\n');
         }
-        var copyright = songInfo.attributes.copyright;
-        if (copyright != null) {
-          appendText(divSongInfo, 'Copyright: ' + copyright);
-          appendElement(divSongInfo, 'br');
-        }
-        if (author != null || copyright != null) {
-          appendElement(divSongInfo, 'br');
-        }
+        appendElement(divSongInfo, 'br');
         preSong.insertBefore(divSongInfo, preSong.firstChild);
       })
       .catch(error => {
@@ -321,14 +315,45 @@ window.addEventListener('load', function() {
       });
   }
 
-  function format(str) {
-    if (str != null) {
-      str = str.trim();
-      str = str.replace(/\[.*?\]/g, "");
-      str = str.replace(/COLUMN_BREAK/g, "");
-      str = str.replace(/PAGE_BREAK/g, "");
-      str = str.replace(/<hide>.*<\/hide>/g, "");
+  function formatSong(chart, description, songId) {
+    if (chart != null) {
+      chart = chart.trim();
+      chart = chart.replace(/\[.*?\]/g, '');
+      chart = chart.replace(/COLUMN_BREAK/g, '');
+      chart = chart.replace(/PAGE_BREAK/g, '');
+      chart = chart.replace(/<hide>.*<\/hide>/g, '');
+
+      var includedVerses = null;
+      if (description != null) {
+        includedVerses = description.match(/\d/g);
+        if (includedVerses != null) {
+          var spanSongTitle = document.getElementById(songId + '-span');
+          includedVerses = includedVerses.toString().replace(/,/g, ', ');
+          appendText(spanSongTitle, ' (verses: ' + includedVerses + ')');
+        }
+      }
+
+      var lyrics = '';
+      var excludeFlg = false;
+      var lines = chart.split('\n');
+      for (var i=0; i < lines.length; i++) {
+        if (lines[i].toLowerCase().startsWith('verse') ||
+            lines[i].toLowerCase().startsWith('chorus') ||
+            lines[i].toLowerCase().startsWith('bridge')) {
+          excludeFlg = false;
+          if (lines[i].toLowerCase().startsWith('verse') && includedVerses != null) {
+            var verseNumber = lines[i].substring(5, lines[i].trim().length).trim();
+            if (!includedVerses.includes(verseNumber)) {
+              excludeFlg = true;
+            }
+          }
+        }
+        if (!excludeFlg) {
+          lyrics += lines[i] + '\n';
+        }
+      }
+      chart = lyrics.trim();
     }
-    return str;
+    return chart;
   }
 });
