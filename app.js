@@ -329,7 +329,7 @@ window.addEventListener('load', function() {
         if (includedVerses != null) {
           var spanSongTitle = document.getElementById(songId + '-span');
           includedVerses = includedVerses.toString().replace(/,/g, ', ');
-          appendText(spanSongTitle, ' (verses: ' + includedVerses + ')');
+          appendText(spanSongTitle, ' (verses ' + includedVerses + ' only)');
         }
       }
 
