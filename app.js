@@ -3,7 +3,8 @@ window.addEventListener('load', function() {
     'a892135e04e60ac990969c510b4a88fadbe525abc269593ef25b0f0ebff06143';
   const REDIRECT_URI = 'https://get-pco-lyrics.herokuapp.com';
   //const REDIRECT_URI = 'http://localhost:5000';
-  const PCO_AUTH_URL = `https://api.planningcenteronline.com/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=services`;
+  const PCO_AUTH_URL =
+    `https://api.planningcenteronline.com/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=services`;
   const CODE = new URL(window.location).searchParams.get('code');
   const accessToken = localStorage.getItem('access_token');
   const expiresAt = +localStorage.getItem('expires_at');
@@ -324,7 +325,7 @@ window.addEventListener('load', function() {
       chart = chart.replace(/<hide>.*<\/hide>/g, '');
 
       var includedVerses = null;
-      if (description != null) {
+      if (description != null && description.charAt(0).toLowerCase() == 'v') {
         includedVerses = description.match(/\d/g);
         if (includedVerses != null) {
           var spanSongTitle = document.getElementById(songId + '-span');
@@ -339,6 +340,7 @@ window.addEventListener('load', function() {
       for (var i=0; i < lines.length; i++) {
         if (lines[i].toLowerCase().startsWith('verse') ||
             lines[i].toLowerCase().startsWith('chorus') ||
+            lines[i].toLowerCase().startsWith('pre') ||
             lines[i].toLowerCase().startsWith('bridge')) {
           excludeFlg = false;
           if (lines[i].toLowerCase().startsWith('verse') && includedVerses != null) {
