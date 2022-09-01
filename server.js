@@ -13,6 +13,10 @@ const REDIRECT_URI = 'https://get-pco-lyrics.herokuapp.com';
 
 app.use(express.static(__dirname));
 
+app.get('/healthz', (req, res) => {
+  res.status(200).json({ 'message': 'health check'})
+})
+
 app.post('/auth/exchange', (req, res) => {
   const CODE = req.body.CODE;
   axios.post('https://api.planningcenteronline.com/oauth/token', {
