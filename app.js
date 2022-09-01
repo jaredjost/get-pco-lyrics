@@ -1,7 +1,7 @@
 window.addEventListener('load', function() {
   const CLIENT_ID =
     'a892135e04e60ac990969c510b4a88fadbe525abc269593ef25b0f0ebff06143';
-  const REDIRECT_URI = 'https://get-pco-lyrics.herokuapp.com';
+  const REDIRECT_URI = 'https://get-pco-lyrics.onrender.com';
   //const REDIRECT_URI = 'http://localhost:5000';
   const PCO_AUTH_URL =
     `https://api.planningcenteronline.com/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=services`;
