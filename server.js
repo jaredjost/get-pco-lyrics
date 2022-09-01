@@ -8,8 +8,7 @@ app.use(bodyParser());
 
 const CLIENT_ID = 'a892135e04e60ac990969c510b4a88fadbe525abc269593ef25b0f0ebff06143';
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const REDIRECT_URI = 'https://get-pco-lyrics.herokuapp.com';
-//const REDIRECT_URI = 'http://localhost:5000';
+const REDIRECT_URI = process.env.CALLBACK_URL;
 
 app.use(express.static(__dirname));
 
