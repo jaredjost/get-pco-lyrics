@@ -1,10 +1,8 @@
 window.addEventListener('load', function() {
-  const CLIENT_ID =
-    'a892135e04e60ac990969c510b4a88fadbe525abc269593ef25b0f0ebff06143';
+  const CLIENT_ID = 'a892135e04e60ac990969c510b4a88fadbe525abc269593ef25b0f0ebff06143';
   const REDIRECT_URI = 'https://get-pco-lyrics.onrender.com';
-  //const REDIRECT_URI = 'http://localhost:5000';
-  const PCO_AUTH_URL =
-    `https://api.planningcenteronline.com/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=services`;
+  //const REDIRECT_URI = 'http://localhost:8080';
+  const PCO_AUTH_URL = `https://api.planningcenteronline.com/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=services`;
   const CODE = new URL(window.location).searchParams.get('code');
   const accessToken = localStorage.getItem('access_token');
   const expiresAt = +localStorage.getItem('expires_at');
@@ -252,7 +250,13 @@ window.addEventListener('load', function() {
 
             var spanSong = document.createElement('span');
             spanSong.id = songId + '-span';
-            appendText(spanSong, ' ' + count + ': ' + items[i].attributes.title + ' ');
+            var songTitle = items[i].attributes.title;
+            var songDescription = items[i].attributes.description;
+            if (songDescription != null)
+            {
+              songTitle += ' (' + songDescription + ')';
+            }
+            appendText(spanSong, ' ' + count + ': ' + songTitle);
             divSongList.appendChild(spanSong);
 
             var preSong = document.createElement('pre');
