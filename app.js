@@ -170,7 +170,13 @@ window.addEventListener('load', function() {
           for (i in services) {
             var opt = new Option();
             opt.value = services[i].links.self + '/items';
-            opt.text = services[i].attributes.dates;
+            var serviceName = services[i].attributes.dates;
+            var serviceTitle = services[i].attributes.title;
+            if (serviceTitle != null && serviceTitle != '')
+            {
+              serviceName += ' (' + serviceTitle + ')';
+            }
+            opt.text = serviceName;
             select.options.add(opt);
           }
           divServices.appendChild(select);
@@ -218,7 +224,6 @@ window.addEventListener('load', function() {
             if (element.type == 'checkbox' &&
                 element.id != 'select-all-chk' &&
                 element.checked) {
-              console.log('Getting contents of ' + element.id + '-pre');
               lyrics += document.getElementById(element.id + '-pre').innerText;
               count++;
             }
