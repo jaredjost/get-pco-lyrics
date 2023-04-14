@@ -5,11 +5,12 @@ window.addEventListener('load', function() {
   const PCO_AUTH_URL = `https://api.planningcenteronline.com/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=services`;
   const CODE = new URL(window.location).searchParams.get('code');
   const accessToken = localStorage.getItem('access_token');
-  const expiresAt = +localStorage.getItem('expires_at');
+  const expiresAt = localStorage.getItem('expires_at');
   const btnLogin = document.getElementById('login-btn');
   const btnLogout = document.getElementById('logout-btn');
   const divServiceType = document.getElementById('service-type-div');
   const divStatus = document.getElementById('status-div');
+  const divServices = document.getElementById('services-div');
   const divSongList = document.getElementById('song-list-div');
   const divSongs = document.getElementById('songs-div');
   const headers = {
@@ -72,7 +73,12 @@ window.addEventListener('load', function() {
 
   function onServiceTypeChanged() {
     console.log('onServiceTypeChanged()');
-    processPlans(this.value);
+    processFutureServices(this.value);
+  }
+
+  function onServiceChanged() {
+    console.log('onServiceChanged()');
+    processServiceItems(this.value);
   }
 
   function appendText(element, text) {
@@ -89,6 +95,7 @@ window.addEventListener('load', function() {
     btnLogout.style.display = 'none';
     divServiceType.style.display = 'none';
     divStatus.style.display = 'none';
+    divServices.style.display = 'none';
     divSongList.style.display = 'none';
     divSongs.style.display = 'none';
   }
@@ -99,10 +106,10 @@ window.addEventListener('load', function() {
     btnLogout.style.display = 'inline-block';
     divServiceType.style.display = '';
     divStatus.style.display = '';
+    divServices.style.display = '';
     divSongList.style.display = '';
     divSongs.style.display = '';
 
-    appendText(divServiceType, 'Accessing PCO... ');
     axios
       .get('https://api.planningcenteronline.com/services/v2', { headers })
       .then(result => {
@@ -123,21 +130,20 @@ window.addEventListener('load', function() {
         var serviceTypes = result.data.data;
         if (serviceTypes.length == 1) {
           appendText(divServiceType, 'Service Type: ' + serviceTypes[0].attributes.name);
-          processPlans(serviceTypes[0].links.self + '/plans');
+          processFutureServices(serviceTypes[0].links.self + '/plans?filter=future');
         } else if (serviceTypes.length > 1) {
           appendText(divServiceType, 'Service Type: ');
-          var select = document.getElementById('service-type-sel');
           var select = document.createElement('select');
           select.id = 'service-type-sel';
           select.addEventListener('change', onServiceTypeChanged);
           for (i in serviceTypes) {
             var opt = new Option();
-            opt.value = serviceTypes[i].links.self + '/plans';
+            opt.value = serviceTypes[i].links.self + '/plans?filter=future';
             opt.text = serviceTypes[i].attributes.name;
             select.options.add(opt);
           }
           divServiceType.appendChild(select);
-          processPlans(serviceTypes[0].links.self + '/plans');
+          processFutureServices(serviceTypes[0].links.self + '/plans?filter=future');
         } else {
           console.log('No service types found');
         }
@@ -147,35 +153,30 @@ window.addEventListener('load', function() {
       });
   }
 
-  function processPlans(url) {
-    console.log('processPlans(' + url + ')');
+  function processFutureServices(url) {
+    console.log('processFutureServices(' + url + ')');
     divStatus.innerHTML = '';
     divSongList.innerHTML = '';
     divSongs.innerHTML = '';
-    appendText(divStatus, 'Searching for the next upcoming plan... ');
-    axios
-      .get(url, { headers })
-      .then(result => {
-        var plans = result.data;
-        processFuturePlans(plans.links.self + '?filter=future');
-      })
-      .catch(error => {
-        console.log('error ', error);
-      });
-  }
-
-  function processFuturePlans(url) {
-    console.log('processFuturePlans(' + url + ')');
     axios
       .get(url, { headers })
       .then(result => {
         if (result.data.data.length > 0) {
-          var nextPlan = result.data.data[0];
-          appendText(divStatus, nextPlan.attributes.dates);
-          appendElement(divStatus, 'br');
-          processItems(nextPlan.links.self + '/items', 0);
+          appendText(divServices, 'Service: ');
+          var services = result.data.data;
+          var select = document.createElement('select');
+          select.id = 'service-sel';
+          select.addEventListener('change', onServiceChanged);
+          for (i in services) {
+            var opt = new Option();
+            opt.value = services[i].links.self + '/items';
+            opt.text = services[i].attributes.dates;
+            select.options.add(opt);
+          }
+          divServices.appendChild(select);
+          processServiceItems(services[0].links.self + '/items');
         } else {
-          appendText(divStatus, 'No future plans found');
+          appendText(divStatus, 'No future services found');
         }
       })
       .catch(function(error) {
@@ -183,15 +184,15 @@ window.addEventListener('load', function() {
       });
   }
 
-  function processItems(url) {
-    console.log('processItems(' + url + ')');
+  function processServiceItems(url) {
+    console.log('processServiceItems(' + url + ')');
+    divSongs.innerHTML = '';
     axios
       .get(url, { headers })
       .then(result => {
+        appendElement(divSongList, 'br');
         var items = result.data.data;
         var isFound = false;
-        appendText(divStatus, 'Searching for songs... ');
-
         var chkSelectAll = document.createElement('input');
         chkSelectAll.type = 'checkbox';
         chkSelectAll.id = 'select-all-chk';
@@ -205,7 +206,7 @@ window.addEventListener('load', function() {
           }
         });
         divSongList.appendChild(chkSelectAll);
-        appendText(divSongList, ' select all ');
+        appendText(divSongList, ' Select All ');
 
         var btnCopy = document.createElement('button');
         btnCopy.id = 'copy-btn';
@@ -223,10 +224,10 @@ window.addEventListener('load', function() {
             }
           }
           if (lyrics.length > 0) {
-            console.log('Selected songs copied to clipboard');
             copyToClipboard(lyrics);
+            alert('Selected song(s) copied to clipboard');
           } else {
-            alert('Please select at least one song to copy');
+            alert('You must select at least one song to copy');
           }
         });
         appendText(btnCopy, 'Copy To Clipboard');
@@ -270,7 +271,8 @@ window.addEventListener('load', function() {
           chkSelectAll.click();
         } else {
           divSongList.innerHTML = '';
-          appendText(divStatus, 'No songs found');
+          divSongs.innerHTML = '';
+          appendText(divSongs, 'No songs found');
         }
       })
       .catch(error => {
@@ -326,7 +328,6 @@ window.addEventListener('load', function() {
       chart = chart.replace(/\[.*?\]/g, '');
       chart = chart.replace(/COLUMN_BREAK/g, '');
       chart = chart.replace(/PAGE_BREAK/g, '');
-      chart = chart.replace(/<hide>.*<\/hide>/g, '');
 
       var includedVerses = null;
       if (description != null && description.charAt(0).toLowerCase() == 'v') {
