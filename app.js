@@ -130,7 +130,7 @@ window.addEventListener('load', function() {
         var serviceTypes = result.data.data;
         if (serviceTypes.length == 1) {
           appendText(divServiceType, 'Service Type: ' + serviceTypes[0].attributes.name);
-          processFutureServices(serviceTypes[0].links.self + '/plans?filter=future');
+          processFutureServices(serviceTypes[0].links.self + '/plans?filter=future&order=sort_date');
         } else if (serviceTypes.length > 1) {
           appendText(divServiceType, 'Service Type: ');
           var select = document.createElement('select');
@@ -138,12 +138,12 @@ window.addEventListener('load', function() {
           select.addEventListener('change', onServiceTypeChanged);
           for (i in serviceTypes) {
             var opt = new Option();
-            opt.value = serviceTypes[i].links.self + '/plans?filter=future';
+            opt.value = serviceTypes[i].links.self + '/plans?filter=future&order=sort_date';
             opt.text = serviceTypes[i].attributes.name;
             select.options.add(opt);
           }
           divServiceType.appendChild(select);
-          processFutureServices(serviceTypes[0].links.self + '/plans?filter=future');
+          processFutureServices(serviceTypes[0].links.self + '/plans?filter=future&order=sort_date');
         } else {
           console.log('No service types found');
         }
@@ -169,14 +169,10 @@ window.addEventListener('load', function() {
           select.addEventListener('change', onServiceChanged);
           for (i in services) {
             var opt = new Option();
+            opt.text = services[i].attributes.dates;
+            opt.text += services[i].attributes.series_title != null ? " | " + services[i].attributes.series_title : "";
+            opt.text += services[i].attributes.title != null ? " | " + services[i].attributes.title : "";
             opt.value = services[i].links.self + '/items';
-            var serviceName = services[i].attributes.dates;
-            var serviceTitle = services[i].attributes.title;
-            if (serviceTitle != null && serviceTitle != '')
-            {
-              serviceName += ' (' + serviceTitle + ')';
-            }
-            opt.text = serviceName;
             select.options.add(opt);
           }
           divServices.appendChild(select);
