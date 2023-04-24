@@ -265,6 +265,10 @@ window.addEventListener('load', function() {
             preSong.id = songId + '-pre';
             divSongs.appendChild(preSong);
 
+            var spacer = document.createElement('div');
+            spacer.style.paddingTop = "20px";
+            divSongs.appendChild(spacer);
+
             processSong(items[i].links.self + '/arrangement', items[i].attributes.description);
           }
         }
