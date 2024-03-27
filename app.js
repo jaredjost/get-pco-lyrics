@@ -188,6 +188,7 @@ window.addEventListener('load', function() {
 
   function processServiceItems(url) {
     console.log('processServiceItems(' + url + ')');
+    divSongList.innerHTML = '';
     divSongs.innerHTML = '';
     axios
       .get(url, { headers })
